@@ -1,0 +1,107 @@
+
+
+select error#, additional_info from dba_scheduler_job_run_details where job_name='RMAN_ARCHBACKUP';  
+select error#, additional_info from dba_scheduler_job_run_details where job_name='RMAN_BACKUP';  
+
+BEGIN DBMS_SCHEDULER.DROP_PROGRAM('RMAN_BACKUPS');
+END;
+/
+
+BEGIN DBMS_SCHEDULER.DROP_JOB('RMAN_BACKUP');
+END;
+/
+
+
+BEGIN
+
+DBMS_SCHEDULER.CREATE_PROGRAM(PROGRAM_NAME =>'RMAN_BACKUPS', PROGRAM_ACTION =>'/opt/oracle/product/scripts/backup_scripts/backup_rac_full_dd.sh', PROGRAM_TYPE => 'EXECUTABLE', ENABLED => TRUE);
+
+DBMS_SCHEDULER.CREATE_JOB(job_name=>'RMAN_BACKUP', job_type => 'EXECUTABLE', number_of_arguments =>6, job_action => '/opt/oracle/product/scripts/backup_scripts/backup_rac_full_dd.sh',
+repeat_interval => 'FREQ=weekly; BYDAY=mon,tue,wed,thu,fri,sat; BYHOUR=20; BYMINUTE=00', enabled => FALSE);
+
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',1,'ennicd01');
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',2,'f');
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',3,'5');
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',4,'3');
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',5,'9f46');
+DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_BACKUP',6,'tnsp03968.tsg.ge.com');
+DBMS_SCHEDULER.ENABLE('RMAN_BACKUP');
+END;
+/
+ 
+EXEC DBMS_SCHEDULER.run_job('RMAN_BACKUP');
+
+BEGIN
+
+ DBMS_SCHEDULER.CREATE_PROGRAM(
+   PROGRAM_NAME =>'RMAN_ARCHBACKUPS',
+   PROGRAM_ACTION =>'/opt/oracle/product/scripts/backup_scripts/backup_rac_archives_dd.sh',
+   PROGRAM_TYPE => 'EXECUTABLE',
+   ENABLED => TRUE);
+
+DBMS_SCHEDULER.CREATE_JOB(
+   job_name             => 'RMAN_ARCHBACKUP',
+   job_type             => 'EXECUTABLE',
+   number_of_arguments  => 5,
+   job_action           => '/opt/oracle/product/scripts/backup_scripts/backup_rac_archives_dd.sh',
+   repeat_interval      => 'FREQ=daily;  BYHOUR=0,2,4,6,8,10,12,14,16,18,20,22; BYMINUTE=10',
+   enabled              => FALSE);
+
+ DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_ARCHBACKUP',1,'ennicd01');
+ DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_ARCHBACKUP',2,'3');
+ DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_ARCHBACKUP',3,'10');
+ DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_ARCHBACKUP',4,'90');
+ DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('RMAN_ARCHBACKUP',5,'9f46');
+ DBMS_SCHEDULER.ENABLE('RMAN_ARCHBACKUP');
+END;
+/
+
+
+oemuser: kvKVU83VYiYc
+oracle: Or@c1e123#
+
+SQL> shutdown immediate;
+SQL> startup mount exclusive;
+SQL> alter database archivelog;
+SQL> alter database open;
+
+select job_name,    status,   actual_start_date,     run_duration from dba_scheduler_job_run_details where job_name = 'RMAN_BACKUP' and status  = 'SUCCEEDED';
+select  log_date, job_name,    status,    req_start_date,     actual_start_date,     run_duration from dba_scheduler_job_run_details where job_name = 'RMAN_BACKUP' and status  = 'SUCCEEDED';
+
+select  log_date,    job_name,    status,    req_start_date,     actual_start_date,     run_duration
+from    dba_scheduler_job_run_details where job_name = 'RMAN_BACKUP' and status  <> 'SUCCEEDED'
+order by 
+   actual_start_date;
+
+select  log_date,    job_name,    status,    req_start_date,     actual_start_date,     run_duration from    dba_scheduler_job_run_details where job_name = 'RMAN_ARCHBACKUP' and status  <> 'SUCCEEDED'
+order by  actual_start_date;
+
+alter system set  db_keep_cache_size=500m scope=spfile;
+alter system set  db_keep_cache_size=500m scope=spfile;
+alter system set  db_recycle_cache_size = 50m  scope=spfile;
+alter system set  shared_pool_size = 1024mb scope=spfile;
+alter system set  pga_aggregate_target = 2g  scope=spfile;
+alter system set  large_pool_size = 512M  scope=spfile;
+alter system set  java_pool_size = 256m  scope=spfile;
+alter system set  db_cache_size = 2g  scope=spfile;
+alter system set  streams_pool_size = 48m  scope=spfile;
+alter system set  db_recycle_cache_size = 50m  scope=spfile;
+alter system set  cursor_sharing=similar  scope=spfile;
+alter system set  result_cache_max_size = 6M  scope=spfile;
+alter system set  processes=1000  scope=spfile;
+alter system set  star_transformation_enabled = FALSE  scope=spfile;
+alter system set  session_cached_cursors = 300  scope=spfile;
+alter system set  filesystemio_options=setall  scope=spfile;
+alter system set  undo_retention = 900  scope=spfile;
+alter system set  recyclebin = off  scope=spfile;
+
+
+
+
+
+
+
+
+
+
+
